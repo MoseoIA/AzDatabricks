@@ -17,7 +17,10 @@ data "azurerm_virtual_network" "databricks_vnet" {
   name                = var.databricks_vnet_name
   resource_group_name = var.databricks_vnet_rg_name
 }
-
+data "azurerm_virtual_network" "private_endpoint_vnet" {
+  name                = var.private_endpoint_vnet_name
+  resource_group_name = var.private_endpoint_vnet_rg_name
+}
 data "azurerm_subnet" "databricks_public_subnet" {
   name                 = var.databricks_public_subnet_name
   virtual_network_name = var.databricks_vnet_name
@@ -54,7 +57,8 @@ resource "azurerm_private_dns_zone_virtual_network_link" "vnet_link" {
   name                  = "${var.private_endpoint_vnet_name}-link"
   private_dns_zone_name = azurerm_private_dns_zone.databricks_pvdns[0].name
   resource_group_name   = data.azurerm_resource_group.rg_databricks.name
-  virtual_network_id    = data.azurerm_subnet.private_endpoint_subnet.virtual_network_id # Enlaza a la VNet del Private Endpoint
+  virtual_network_id    = data.azurerm_virtual_network.private_endpoint_vnet.id 
+  
   registration_enabled  = false # Generalmente false para links de Private Endpoint
   tags                  = var.tags
 }
