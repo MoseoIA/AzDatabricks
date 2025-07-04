@@ -22,6 +22,6 @@ output "storage_account_id" {
 }
 
 output "private_dns_zone_id" {
-  value       = var.create_private_dns_zone ? azurerm_private_dns_zone.databricks_pvdns[0].id : null
+  value       = var.enable_private_dns_integration && var.create_private_dns_zone ? azurerm_private_dns_zone.databricks_pvdns[0].id : null
   description = "El ID de la Zona DNS Privada creada por el módulo. Será nulo si no se creó."
 }

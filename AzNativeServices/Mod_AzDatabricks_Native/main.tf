@@ -1,11 +1,13 @@
 # --- main.tf en Mod_AzDatabricks_Native ---
-# Versión final que incluye la creación opcional de la Zona DNS Privada.
+# Versión final con integración de DNS completamente opcional.
 
 # --- LOCALS ---
 # Variables locales para simplificar la lógica condicional.
 locals {
-  # Decide qué ID de zona DNS usar: el de la zona recién creada o el de una existente pasada como variable.
-  dns_zone_id = var.create_private_dns_zone ? azurerm_private_dns_zone.databricks_pvdns[0].id : var.private_dns_zone_id_databricks
+  # Decide qué ID de zona DNS usar, solo si la integración DNS está habilitada.
+  dns_zone_id = var.enable_private_dns_integration ? (
+    var.create_private_dns_zone ? azurerm_private_dns_zone.databricks_pvdns[0].id : var.private_dns_zone_id_databricks
+  ) : null
 }
 
 # --- DATA SOURCES ---
@@ -17,10 +19,12 @@ data "azurerm_virtual_network" "databricks_vnet" {
   name                = var.databricks_vnet_name
   resource_group_name = var.databricks_vnet_rg_name
 }
+
 data "azurerm_virtual_network" "private_endpoint_vnet" {
   name                = var.private_endpoint_vnet_name
   resource_group_name = var.private_endpoint_vnet_rg_name
 }
+
 data "azurerm_subnet" "databricks_public_subnet" {
   name                 = var.databricks_public_subnet_name
   virtual_network_name = var.databricks_vnet_name
@@ -39,11 +43,12 @@ data "azurerm_subnet" "private_endpoint_subnet" {
   resource_group_name  = var.private_endpoint_vnet_rg_name
 }
 
+
 # --- AZURE RESOURCES ---
 
 # --- Creación Opcional de la Zona DNS Privada ---
 resource "azurerm_private_dns_zone" "databricks_pvdns" {
-  count = var.create_private_dns_zone ? 1 : 0
+  count = var.enable_private_dns_integration && var.create_private_dns_zone ? 1 : 0
 
   name                = var.private_dns_zone_name
   resource_group_name = data.azurerm_resource_group.rg_databricks.name
@@ -52,14 +57,13 @@ resource "azurerm_private_dns_zone" "databricks_pvdns" {
 
 # --- Creación Opcional del VNet Link para la Zona DNS ---
 resource "azurerm_private_dns_zone_virtual_network_link" "vnet_link" {
-  count = var.create_private_dns_zone ? 1 : 0
+  count = var.enable_private_dns_integration && var.create_private_dns_zone ? 1 : 0
 
   name                  = "${var.private_endpoint_vnet_name}-link"
   private_dns_zone_name = azurerm_private_dns_zone.databricks_pvdns[0].name
   resource_group_name   = data.azurerm_resource_group.rg_databricks.name
-  virtual_network_id    = data.azurerm_virtual_network.private_endpoint_vnet.id 
-  
-  registration_enabled  = false # Generalmente false para links de Private Endpoint
+  virtual_network_id    = data.azurerm_virtual_network.private_endpoint_vnet.id
+  registration_enabled  = false
   tags                  = var.tags
 }
 
@@ -97,10 +101,14 @@ resource "azurerm_private_endpoint" "databricks_pe" {
     subresource_names              = ["databricks_ui_api"]
   }
 
-  private_dns_zone_group {
-    name                 = "default"
-    # Usa la variable local para asignar el ID de la zona DNS correcta
-    private_dns_zone_ids = [local.dns_zone_id]
+  # --- BLOQUE DINÁMICO ---
+  # Este bloque 'private_dns_zone_group' solo se creará si var.enable_private_dns_integration es true.
+  dynamic "private_dns_zone_group" {
+    for_each = var.enable_private_dns_integration ? [1] : []
+    content {
+      name                 = "default"
+      private_dns_zone_ids = [local.dns_zone_id]
+    }
   }
 
   tags = var.tags

@@ -1,5 +1,5 @@
 # --- main.tf en el proyecto CentroContactoDatos ---
-# Versión final que delega la creación de la Zona DNS al módulo.
+# Versión final que muestra cómo configurar el módulo para los diferentes escenarios de DNS.
 
 terraform {
   required_providers {
@@ -14,11 +14,19 @@ provider "azurerm" {
   features {}
 }
 
+# --- (OPCIONAL) DATA SOURCE PARA USAR UNA ZONA DNS EXISTENTE ---
+# Descomenta este bloque solo si vas a usar el Escenario 2.
+# data "azurerm_private_dns_zone" "dns_existente" {
+#   name                = "privatelink.azuredatabricks.net"
+#   resource_group_name = "mi-grupo-de-recursos-de-red" # <-- CAMBIA ESTO
+# }
+
+
 # --- LLAMADA AL MÓDULO DE DATABRICKS ---
 module "databricks_contact_center" {
   # IMPORTANTE: Reemplaza la URL con la de tu repositorio de GitHub.
-  # Usa una nueva versión/tag que refleje los últimos cambios.
-  source = "git::https://github.com/tu-organizacion/AzNativeServices.git//Mod_AzDatabricks_Native?ref=v1.3.0"
+  # Usa una nueva versión/tag que refleje los últimos cambios (ej. v1.4.0).
+  source = "git::https://github.com/tu-organizacion/AzNativeServices.git//Mod_AzDatabricks_Native?ref=v1.4.0"
 
   # --- Parámetros Generales ---
   resource_group_name            = "z-nsm-contactcenter-pp01-ue2-01"
@@ -35,10 +43,23 @@ module "databricks_contact_center" {
   private_endpoint_vnet_rg_name  = "z-nsm-ccint-pp01-ue2-01"
   private_endpoint_subnet_name   = "main-pic-rt"
   
-  # --- Habilitar creación de la Zona DNS Privada ---
-  # El módulo ahora se encargará de crear la zona y el VNet link.
-  create_private_dns_zone = true
-  # 'private_dns_zone_id_databricks' ya no es necesario aquí.
+  # --- CONFIGURACIÓN DE DNS ---
+  # Elige UNO de los siguientes 3 escenarios y comenta los otros dos.
+
+  # --- Escenario 1: CREAR una nueva Zona DNS (Configuración Actual) ---
+  enable_private_dns_integration = true
+  create_private_dns_zone        = true
+
+  # --- Escenario 2: USAR una Zona DNS existente ---
+  # Comenta el Escenario 1 y descomenta las siguientes 3 líneas.
+  # enable_private_dns_integration = true
+  # create_private_dns_zone        = false # Opcional, es el valor por defecto
+  # private_dns_zone_id_databricks = data.azurerm_private_dns_zone.dns_existente.id
+
+  # --- Escenario 3: SIN integración con DNS ---
+  # Comenta los Escenarios 1 y 2 y descomenta la siguiente línea.
+  # enable_private_dns_integration = false
+
 
   # --- Habilitar creación de la cuenta de almacenamiento ---
   create_storage_account = true

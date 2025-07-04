@@ -65,9 +65,15 @@ variable "private_endpoint_subnet_name" {
 
 # --- Variables de DNS Privado ---
 
+variable "enable_private_dns_integration" {
+  type        = bool
+  description = "Interruptor principal. Si es true, se habilita la integración con Zonas DNS Privadas. Si es false, el Private Endpoint se crea sin asociación a DNS."
+  default     = true
+}
+
 variable "create_private_dns_zone" {
   type        = bool
-  description = "Si es true, el módulo creará una nueva Zona DNS Privada y la enlazará a la VNet."
+  description = "Si es true, el módulo creará una nueva Zona DNS Privada. Solo es relevante si enable_private_dns_integration es true."
   default     = false
 }
 
@@ -79,7 +85,7 @@ variable "private_dns_zone_name" {
 
 variable "private_dns_zone_id_databricks" {
   type        = string
-  description = "ID de una Zona DNS Privada existente. Usar solo si create_private_dns_zone es false."
+  description = "ID de una Zona DNS Privada existente. Usar solo si enable_private_dns_integration es true y create_private_dns_zone es false."
   default     = null
 }
 
