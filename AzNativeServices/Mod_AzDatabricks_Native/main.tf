@@ -43,7 +43,6 @@ data "azurerm_subnet" "private_endpoint_subnet" {
   resource_group_name  = var.private_endpoint_vnet_rg_name
 }
 
-
 # --- AZURE RESOURCES ---
 
 # --- Creación Opcional de la Zona DNS Privada ---
@@ -82,6 +81,10 @@ resource "azurerm_databricks_workspace" "databricks_ws" {
     public_subnet_name  = data.azurerm_subnet.databricks_public_subnet.name
     private_subnet_name = data.azurerm_subnet.databricks_private_subnet.name
     virtual_network_id  = data.azurerm_virtual_network.databricks_vnet.id
+
+    # Se añaden los IDs de los NSG, que son requeridos por Azure.
+    public_subnet_network_security_group_association_id  = var.public_subnet_nsg_id
+    private_subnet_network_security_group_association_id = var.private_subnet_nsg_id
   }
 
   tags = var.tags

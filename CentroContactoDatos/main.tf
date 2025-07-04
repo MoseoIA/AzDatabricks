@@ -14,6 +14,21 @@ provider "azurerm" {
   features {}
 }
 
+
+# --- DATA SOURCES ---
+# Busca los NSGs existentes que están asociados a las subnets de Databricks.
+# IMPORTANTE: Reemplaza los nombres de los NSG con los nombres reales en tu entorno.
+data "azurerm_network_security_group" "public_nsg" {
+  name                = "nsg-databrickspub" # <-- CAMBIA ESTO AL NOMBRE REAL
+  resource_group_name = "z-nsm-ccentercint-pp01-ue2-01" # RG donde está la VNet
+}
+
+data "azurerm_network_security_group" "private_nsg" {
+  name                = "nsg-databrickspriv" # <-- CAMBIA ESTO AL NOMBRE REAL
+  resource_group_name = "z-nsm-ccentercint-pp01-ue2-01" # RG donde está la VNet
+}
+
+
 # --- (OPCIONAL) DATA SOURCE PARA USAR UNA ZONA DNS EXISTENTE ---
 # Descomenta este bloque solo si vas a usar el Escenario 2.
 # data "azurerm_private_dns_zone" "dns_existente" {
@@ -38,11 +53,16 @@ module "databricks_contact_center" {
   databricks_vnet_rg_name        = "z-nsm-ccentercint-pp01-ue2-01"
   databricks_public_subnet_name  = "databrickspub64-pic-rt"
   databricks_private_subnet_name = "databrickspriv64-pic-rt"
-
+  # --- NUEVOS PARÁMETROS PARA LOS NSG ---
+  public_subnet_nsg_id           = data.azurerm_network_security_group.public_nsg.id
+  private_subnet_nsg_id          = data.azurerm_network_security_group.private_nsg.id
+  # --- NUEVOS PARÁMETROS PARA EL PRIVATE ENDPOINT ---
+  private_endpoint_name          = "private-endpoint-databricks-pic-rt" # <-- CAMBIA ESTO
   private_endpoint_vnet_name     = "znsmccintpp01ue2net01"
   private_endpoint_vnet_rg_name  = "z-nsm-ccint-pp01-ue2-01"
   private_endpoint_subnet_name   = "main-pic-rt"
   
+
   # --- CONFIGURACIÓN DE DNS ---
   # Elige UNO de los siguientes 3 escenarios y comenta los otros dos.
 

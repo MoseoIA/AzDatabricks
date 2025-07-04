@@ -46,6 +46,17 @@ variable "databricks_private_subnet_name" {
   description = "Nombre de la subnet privada para Databricks."
 }
 
+# --- NUEVAS VARIABLES PARA LOS NSG ---
+variable "public_subnet_nsg_id" {
+  type        = string
+  description = "El ID del Network Security Group para la subnet pública."
+}
+
+variable "private_subnet_nsg_id" {
+  type        = string
+  description = "El ID del Network Security Group para la subnet privada."
+}
+
 # --- Variables de Red para el Private Endpoint ---
 
 variable "private_endpoint_vnet_name" {
