@@ -74,6 +74,9 @@ resource "azurerm_databricks_workspace" "databricks_ws" {
   location                      = data.azurerm_resource_group.rg_databricks.location
   sku                           = var.sku
   managed_resource_group_name   = var.managed_resource_group_name
+   # Cambiamos "AllRules" por "NoAzureDatabricksRules".
+  # Esto es obligatorio para workspaces privados con VNet Injection. Le decimos a Azure que nosotros gestionaremos las reglas del NSG.
+  network_security_group_rules_required = "NoAzureDatabricksRules"
   public_network_access_enabled = false
 
   custom_parameters {
