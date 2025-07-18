@@ -1,0 +1,41 @@
+Características principales:
+Parámetros del script:
+
+MandatoryTags: String con los tags obligatorios (formato: "tag1=value1,tag2=value2")
+AuditType: ResourceGroups, Resources, o Both
+ValidateValues: Switch para validar no solo presencia sino también valores exactos
+OnlyMissingTags: Switch para mostrar solo recursos con tags faltantes (ignorar valores incorrectos)
+ExportToCSV: Switch para exportar resultados
+OutputPath: Ruta personalizada para el archivo CSV
+
+Funcionalidades avanzadas:
+
+Validación flexible: Puede verificar solo presencia de tags o también valores exactos
+Parser inteligente: Parsea correctamente la cadena de tags mandatorios
+Progreso visual: Muestra progreso al procesar muchos recursos
+Estadísticas detalladas: Diferencia entre tags faltantes y valores incorrectos
+Reportes completos: Muestra tags actuales vs. requeridos
+
+Ejemplos de uso:
+powershell# Validar solo presencia de tags (no valores)
+.\ValidateMandatoryTags.ps1 -MandatoryTags "Environment=Production,Owner=IT,CostCenter=12345" -AuditType Both
+
+# Validar presencia Y valores exactos
+.\ValidateMandatoryTags.ps1 -MandatoryTags "Environment=Production,Owner=IT,CostCenter=12345" -AuditType Both -ValidateValues
+
+# Solo mostrar recursos con tags completamente faltantes
+.\ValidateMandatoryTags.ps1 -MandatoryTags "Environment=Production,Owner=IT" -AuditType Resources -OnlyMissingTags
+
+# Exportar resultados a CSV
+.\ValidateMandatoryTags.ps1 -MandatoryTags "tag1=tg1,tag2=tg2,tag3=tg3" -AuditType Both -ExportToCSV
+
+# Validar suscripción específica
+.\ValidateMandatoryTags.ps1 -MandatoryTags "Environment=Prod,Team=DevOps" -AuditType Both -SubscriptionId "12345678-1234-1234-1234-123456789012"
+Formato de salida:
+El script proporciona información detallada sobre cada recurso no conforme:
+
+Nombre y tipo de recurso
+Tags actuales (todos los tags existentes)
+Tags faltantes (cuáles tags mandatorios no están presentes)
+Valores incorrectos (cuáles tags tienen valores diferentes a los esperados)
+Estadísticas de cumplimiento

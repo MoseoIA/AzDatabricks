@@ -1,0 +1,80 @@
+Características principales:
+Parámetros del script:
+
+TagsToApply: Tags a aplicar (formato: "tag1=value1,tag2=value2")
+ApplyTo: ResourceGroups, Resources, o Both
+TagAction: Add, Replace, o Merge (estrategia de aplicación)
+WhatIf: Modo simulación (no aplica cambios reales)
+IncludeResourcesInGroups: Al procesar grupos, también procesa recursos dentro
+InputCSV: Procesar desde CSV (de los scripts anteriores)
+Force: Saltar confirmación
+BatchSize: Procesar en lotes para evitar throttling
+
+Estrategias de aplicación de tags:
+
+Add: Solo agrega tags que no existen (preserva existentes)
+Replace: Reemplaza completamente todos los tags
+Merge: Mantiene existentes y agrega/actualiza nuevos
+
+Funcionalidades avanzadas:
+
+Logging completo: Registra todas las operaciones
+Procesamiento en lotes: Evita throttling de Azure
+Filtros: Por grupo de recursos, tipo de recurso
+Progreso visual: Muestra progreso en operaciones largas
+Reportes detallados: CSV con todos los resultados
+Modo WhatIf: Simula cambios sin aplicarlos
+
+Ejemplos de uso:
+Operaciones básicas:
+powershell# Modo simulación (recomendado primero)
+.\ApplyAzureTags.ps1 -TagsToApply "Environment=Production,Owner=IT" -ApplyTo Both -WhatIf
+
+# Aplicar tags a grupos de recursos solamente
+.\ApplyAzureTags.ps1 -TagsToApply "Environment=Production,Owner=IT" -ApplyTo ResourceGroups -TagAction Merge
+
+# Aplicar tags a recursos y también a los grupos que los contienen
+.\ApplyAzureTags.ps1 -TagsToApply "Environment=Production,Owner=IT" -ApplyTo ResourceGroups -IncludeResourcesInGroups
+Operaciones avanzadas:
+powershell# Procesar desde CSV de auditoría anterior
+.\ApplyAzureTags.ps1 -TagsToApply "Environment=Production,Owner=IT" -InputCSV ".\audit_results.csv" -WhatIf
+
+# Aplicar solo a ciertos grupos de recursos
+.\ApplyAzureTags.ps1 -TagsToApply "Environment=Production" -ApplyTo ResourceGroups -ResourceGroupFilter "rg-prod-*"
+
+# Aplicar solo a ciertos tipos de recursos
+.\ApplyAzureTags.ps1 -TagsToApply "Environment=Production" -ApplyTo Resources -ResourceTypeFilter "Microsoft.Compute/virtualMachines"
+
+# Operación completa con logging personalizado
+.\ApplyAzureTags.ps1 -TagsToApply "Environment=Production,Owner=IT,CostCenter=12345" -ApplyTo Both -TagAction Merge -LogPath "C:\Logs\TagRemediation.log" -Force
+Estrategias de tags:
+powershell# Solo agregar tags faltantes (no sobrescribir existentes)
+.\ApplyAzureTags.ps1 -TagsToApply "Environment=Production,Owner=IT" -ApplyTo Both -TagAction Add
+
+# Reemplazar completamente los tags
+.\ApplyAzureTags.ps1 -TagsToApply "Environment=Production,Owner=IT" -ApplyTo Both -TagAction Replace
+
+# Merge inteligente (recomendado)
+.\ApplyAzureTags.ps1 -TagsToApply "Environment=Production,Owner=IT" -ApplyTo Both -TagAction Merge
+Flujo de trabajo completo:
+
+Auditoría inicial: Usar el primer script para encontrar recursos sin tags
+Validación: Usar el segundo script para validar compliance
+Simulación: Usar este script con -WhatIf para ver qué cambios se aplicarían
+Aplicación: Ejecutar sin -WhatIf para aplicar los cambios
+Verificación: Volver a ejecutar la validación para confirmar compliance
+
+Características de seguridad:
+
+Confirmación requerida (a menos que uses -Force)
+Modo WhatIf para simular cambios
+Logging completo de todas las operaciones
+Procesamiento en lotes para evitar saturar Azure
+Manejo de errores robusto
+
+
+Proximos pasos
+
+Un script que genere Azure Policy para enforçar estos tags automáticamente
+Un script de monitoreo continuo que detecte recursos nuevos sin tags
+Un dashboard para visualizar el estado de compliance de tags

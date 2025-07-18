@@ -1,0 +1,42 @@
+PowerShell para auditar recursos sin tags en Azure. El script incluye las siguientes características:
+Características principales:
+
+Parámetros flexibles:
+
+AuditType: Permite elegir entre "ResourceGroups", "Resources" o "Both"
+SubscriptionId: Opcional, para auditar una suscripción específica
+OutputPath: Ruta personalizada para exportar resultados
+ExportToCSV: Switch para exportar a CSV
+
+
+Funcionalidades:
+
+Verifica la conexión a Azure automáticamente
+Obtiene grupos de recursos sin tags
+Obtiene recursos individuales sin tags
+Muestra resultados formatados en consola
+Exporta resultados a CSV
+Proporciona resumen y recomendaciones
+
+
+
+Ejemplos de uso:
+powershell# Auditar solo grupos de recursos
+.\AuditAzureTags.ps1 -AuditType ResourceGroups
+
+# Auditar solo recursos individuales
+.\AuditAzureTags.ps1 -AuditType Resources
+
+# Auditar ambos y exportar a CSV
+.\AuditAzureTags.ps1 -AuditType Both -ExportToCSV
+
+# Auditar suscripción específica
+.\AuditAzureTags.ps1 -AuditType Both -SubscriptionId "12345678-1234-1234-1234-123456789012"
+
+# Auditar con ruta de salida personalizada
+.\AuditAzureTags.ps1 -AuditType Both -ExportToCSV -OutputPath "C:\Reports\TagsAudit.csv"
+Prerrequisitos:
+
+Módulo Az de PowerShell instalado
+Conexión a Azure (Connect-AzAccount)
+Permisos de lectura en las suscripciones
