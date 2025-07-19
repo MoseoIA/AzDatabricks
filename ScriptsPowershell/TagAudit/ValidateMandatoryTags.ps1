@@ -260,7 +260,7 @@ function Get-NonCompliantResources {
     }
 }
 
-# Función para exportar resultados a CSV
+# Función para exportar resultados a CSV - MEJORADA
 function Export-ResultsToCSV {
     param(
         [array]$Results,
@@ -268,8 +268,8 @@ function Export-ResultsToCSV {
         [string]$AuditType
     )
     
-    if ($Results.Count -eq 0) {
-        Write-Host "No hay resultados para exportar." -ForegroundColor Yellow
+    if ($null -eq $Results -or $Results.Count -eq 0) {
+        Write-Host "✅ No hay resultados para exportar. Todos los recursos cumplen con los tags mandatorios." -ForegroundColor Green
         return
     }
     
@@ -279,12 +279,61 @@ function Export-ResultsToCSV {
         $OutputPath = ".\Azure_MandatoryTags_Validation_${AuditType}_${timestamp}.csv"
     }
     
+    # Verificar que el directorio de destino existe
+    $directory = Split-Path -Path $OutputPath -Parent
+    if ($directory -and -not (Test-Path $directory)) {
+        try {
+            New-Item -ItemType Directory -Path $directory -Force | Out-Null
+            Write-Host "Directorio creado: $directory" -ForegroundColor Yellow
+        }
+        catch {
+            Write-Host "❌ Error al crear directorio: $($_.Exception.Message)" -ForegroundColor Red
+            return
+        }
+    }
+    
     try {
+        Write-Host "📤 Exportando $($Results.Count) resultados no conformes..." -ForegroundColor Yellow
+        
+        # Validar que los resultados tienen la estructura correcta
+        $firstResult = $Results[0]
+        $expectedProperties = @('ResourceGroupName', 'ResourceType', 'Location', 'SubscriptionId', 'CurrentTags', 'MissingTags', 'IncorrectValues', 'ResourceId', 'ComplianceStatus')
+        
+        foreach ($prop in $expectedProperties) {
+            if (-not $firstResult.PSObject.Properties[$prop]) {
+                Write-Host "⚠️  Advertencia: Propiedad '$prop' no encontrada en los resultados" -ForegroundColor Yellow
+            }
+        }
+        
+        # Exportar a CSV
         $Results | Export-Csv -Path $OutputPath -NoTypeInformation -Encoding UTF8
-        Write-Host "Resultados exportados a: $OutputPath" -ForegroundColor Green
+        
+        # Verificar que el archivo se creó correctamente
+        if (Test-Path $OutputPath) {
+            $fileInfo = Get-Item $OutputPath
+            Write-Host "✅ Resultados exportados exitosamente a: $OutputPath" -ForegroundColor Green
+            Write-Host "📊 Tamaño del archivo: $($fileInfo.Length) bytes" -ForegroundColor Cyan
+            Write-Host "📅 Fecha de creación: $($fileInfo.CreationTime)" -ForegroundColor Cyan
+            
+            # Mostrar las primeras líneas del archivo para verificar
+            try {
+                $csvContent = Get-Content $OutputPath -TotalCount 3
+                Write-Host "📄 Vista previa del archivo CSV:" -ForegroundColor Cyan
+                foreach ($line in $csvContent) {
+                    Write-Host "   $line" -ForegroundColor Gray
+                }
+            }
+            catch {
+                Write-Host "⚠️  No se pudo leer la vista previa del archivo" -ForegroundColor Yellow
+            }
+        } else {
+            Write-Host "❌ Advertencia: No se pudo verificar la creación del archivo" -ForegroundColor Red
+        }
     }
     catch {
-        Write-Host "Error al exportar resultados: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "❌ Error al exportar resultados: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "📁 Ruta intentada: $OutputPath" -ForegroundColor Gray
+        Write-Host "💡 Sugerencia: Verifique permisos de escritura en la ruta especificada" -ForegroundColor Yellow
     }
 }
 
@@ -295,7 +344,7 @@ function Show-Results {
         [string]$Type
     )
     
-    if ($Results.Count -eq 0) {
+    if ($null -eq $Results -or $Results.Count -eq 0) {
         Write-Host "✅ Todos los $Type cumplen con los tags mandatorios." -ForegroundColor Green
         return
     }
@@ -306,7 +355,7 @@ function Show-Results {
     foreach ($item in $Results) {
         Write-Host "Nombre: $($item.ResourceName -or $item.ResourceGroupName)" -ForegroundColor White
         Write-Host "Tipo: $($item.ResourceType)" -ForegroundColor Gray
-        if ($item.ResourceGroupName) {
+        if ($item.ResourceGroupName -and $item.ResourceName) {
             Write-Host "Grupo de Recursos: $($item.ResourceGroupName)" -ForegroundColor Gray
         }
         Write-Host "Ubicación: $($item.Location)" -ForegroundColor Gray
@@ -332,6 +381,7 @@ $mandatoryTagsHash = Parse-MandatoryTags -MandatoryTagsString $MandatoryTags
 
 if ($mandatoryTagsHash.Count -eq 0) {
     Write-Host "❌ No se pudieron parsear los tags mandatorios. Verifique el formato." -ForegroundColor Red
+    Write-Host "💡 Ejemplo correcto: 'Environment=Production,CostCenter=IT,Owner=TeamA'" -ForegroundColor Yellow
     exit 1
 }
 
@@ -341,6 +391,12 @@ foreach ($tag in $mandatoryTagsHash.GetEnumerator()) {
     $validationMode = if ($ValidateValues) { "Valor requerido: $($tag.Value)" } else { "Solo presencia requerida" }
     Write-Host "  • $($tag.Key): $validationMode" -ForegroundColor White
 }
+
+# Mostrar opciones de validación
+Write-Host "`n⚙️  Opciones de validación:" -ForegroundColor Cyan
+Write-Host "  • Validar valores: $(if ($ValidateValues) { 'Sí' } else { 'No' })" -ForegroundColor White
+Write-Host "  • Solo tags faltantes: $(if ($OnlyMissingTags) { 'Sí' } else { 'No' })" -ForegroundColor White
+Write-Host "  • Exportar a CSV: $(if ($ExportToCSV) { 'Sí' } else { 'No' })" -ForegroundColor White
 
 # Mostrar contexto actual
 $currentContext = Get-AzContext
@@ -355,13 +411,13 @@ switch ($AuditType) {
     "ResourceGroups" {
         $results = Get-NonCompliantResourceGroups -SubscriptionId $SubscriptionId -MandatoryTags $mandatoryTagsHash -ValidateValues $ValidateValues -OnlyMissingTags $OnlyMissingTags
         Show-Results -Results $results -Type "grupos de recursos"
-        $allResults += $results
+        if ($results) { $allResults += $results }
     }
     
     "Resources" {
         $results = Get-NonCompliantResources -SubscriptionId $SubscriptionId -MandatoryTags $mandatoryTagsHash -ValidateValues $ValidateValues -OnlyMissingTags $OnlyMissingTags
         Show-Results -Results $results -Type "recursos"
-        $allResults += $results
+        if ($results) { $allResults += $results }
     }
     
     "Both" {
@@ -373,13 +429,14 @@ switch ($AuditType) {
         $resourceResults = Get-NonCompliantResources -SubscriptionId $SubscriptionId -MandatoryTags $mandatoryTagsHash -ValidateValues $ValidateValues -OnlyMissingTags $OnlyMissingTags
         Show-Results -Results $resourceResults -Type "recursos"
         
-        $allResults += $rgResults
-        $allResults += $resourceResults
+        if ($rgResults) { $allResults += $rgResults }
+        if ($resourceResults) { $allResults += $resourceResults }
     }
 }
 
 # Exportar resultados si se solicita
 if ($ExportToCSV) {
+    Write-Host "`n📤 Iniciando exportación a CSV..." -ForegroundColor Cyan
     Export-ResultsToCSV -Results $allResults -OutputPath $OutputPath -AuditType $AuditType
 }
 
@@ -393,13 +450,4 @@ if ($allResults.Count -gt 0) {
     $resourcesWithIncorrectValues = $allResults | Where-Object { $_.IncorrectValues -ne "None" }
     
     Write-Host "  • Elementos con tags faltantes: $($resourcesWithMissingTags.Count)" -ForegroundColor Yellow
-    Write-Host "  • Elementos con valores incorrectos: $($resourcesWithIncorrectValues.Count)" -ForegroundColor Yellow
-    
-    Write-Host "`n💡 Próximos pasos recomendados:" -ForegroundColor Cyan
-    Write-Host "1. Aplicar tags faltantes usando scripts de remediación" -ForegroundColor White
-    Write-Host "2. Corregir valores incorrectos de tags" -ForegroundColor White
-    Write-Host "3. Implementar Azure Policy para enforçar tags mandatorios" -ForegroundColor White
-    Write-Host "4. Configurar alertas para detectar recursos no conformes" -ForegroundColor White
-}
-
-Write-Host "`n✅ Validación completada." -ForegroundColor Green
+    Writ

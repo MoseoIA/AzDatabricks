@@ -107,7 +107,7 @@ function Get-ResourcesWithoutTags {
     }
 }
 
-# Función para exportar resultados a CSV
+# Función para exportar resultados a CSV - MEJORADA
 function Export-ResultsToCSV {
     param(
         [array]$Results,
@@ -115,7 +115,7 @@ function Export-ResultsToCSV {
         [string]$AuditType
     )
     
-    if ($Results.Count -eq 0) {
+    if ($null -eq $Results -or $Results.Count -eq 0) {
         Write-Host "No hay resultados para exportar." -ForegroundColor Yellow
         return
     }
@@ -126,12 +126,35 @@ function Export-ResultsToCSV {
         $OutputPath = ".\Azure_Tags_Audit_${AuditType}_${timestamp}.csv"
     }
     
+    # Verificar que el directorio de destino existe
+    $directory = Split-Path -Path $OutputPath -Parent
+    if ($directory -and -not (Test-Path $directory)) {
+        try {
+            New-Item -ItemType Directory -Path $directory -Force | Out-Null
+            Write-Host "Directorio creado: $directory" -ForegroundColor Yellow
+        }
+        catch {
+            Write-Host "Error al crear directorio: $($_.Exception.Message)" -ForegroundColor Red
+            return
+        }
+    }
+    
     try {
+        Write-Host "Exportando $($Results.Count) resultados..." -ForegroundColor Yellow
         $Results | Export-Csv -Path $OutputPath -NoTypeInformation -Encoding UTF8
-        Write-Host "Resultados exportados a: $OutputPath" -ForegroundColor Green
+        Write-Host "✅ Resultados exportados exitosamente a: $OutputPath" -ForegroundColor Green
+        
+        # Verificar que el archivo se creó correctamente
+        if (Test-Path $OutputPath) {
+            $fileInfo = Get-Item $OutputPath
+            Write-Host "Tamaño del archivo: $($fileInfo.Length) bytes" -ForegroundColor Cyan
+        } else {
+            Write-Host "⚠️  Advertencia: No se pudo verificar la creación del archivo" -ForegroundColor Yellow
+        }
     }
     catch {
-        Write-Host "Error al exportar resultados: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "❌ Error al exportar resultados: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "Ruta intentada: $OutputPath" -ForegroundColor Gray
     }
 }
 
@@ -142,7 +165,7 @@ function Show-Results {
         [string]$Type
     )
     
-    if ($Results.Count -eq 0) {
+    if ($null -eq $Results -or $Results.Count -eq 0) {
         Write-Host "✅ No se encontraron $Type sin tags." -ForegroundColor Green
         return
     }
@@ -198,19 +221,17 @@ switch ($AuditType) {
         Show-Results -Results $rgResults -Type "grupos de recursos"
         
         Write-Host "`n📋 Auditando recursos..." -ForegroundColor Cyan
-        $resourceRe
-        
-        
-        sults = Get-ResourcesWithoutTags -SubscriptionId $SubscriptionId
+        $resourceResults = Get-ResourcesWithoutTags -SubscriptionId $SubscriptionId
         Show-Results -Results $resourceResults -Type "recursos"
         
-        $allResults += $rgResults
-        $allResults += $resourceResults
+        if ($rgResults) { $allResults += $rgResults }
+        if ($resourceResults) { $allResults += $resourceResults }
     }
 }
 
 # Exportar resultados si se solicita
 if ($ExportToCSV) {
+    Write-Host "`n📤 Iniciando exportación a CSV..." -ForegroundColor Cyan
     Export-ResultsToCSV -Results $allResults -OutputPath $OutputPath -AuditType $AuditType
 }
 
