@@ -49,10 +49,11 @@ function Get-ResourceGroupsWithoutTags {
         foreach ($rg in $resourceGroups) {
             if ($null -eq $rg.Tags -or $rg.Tags.Count -eq 0) {
                 $resourceGroupsWithoutTags += [PSCustomObject]@{
+                    Name = $rg.ResourceGroupName
+                    ResourceType = "ResourceGroup"
                     ResourceGroupName = $rg.ResourceGroupName
                     Location = $rg.Location
                     SubscriptionId = $rg.ResourceId.Split('/')[2]
-                    ResourceType = "ResourceGroup"
                     Tags = "No Tags"
                     ResourceId = $rg.ResourceId
                 }
@@ -88,7 +89,7 @@ function Get-ResourcesWithoutTags {
         foreach ($resource in $resources) {
             if ($null -eq $resource.Tags -or $resource.Tags.Count -eq 0) {
                 $resourcesWithoutTags += [PSCustomObject]@{
-                    ResourceName = $resource.Name
+                    Name = $resource.Name
                     ResourceType = $resource.ResourceType
                     ResourceGroupName = $resource.ResourceGroupName
                     Location = $resource.Location
@@ -174,7 +175,7 @@ function Show-Results {
     Write-Host "=" * 80 -ForegroundColor Cyan
     
     foreach ($item in $Results) {
-        Write-Host "Nombre: $($item.ResourceName -or $item.ResourceGroupName)" -ForegroundColor White
+        Write-Host "Nombre: $($item.Name)" -ForegroundColor White
         Write-Host "Tipo: $($item.ResourceType)" -ForegroundColor Gray
         Write-Host "Grupo de Recursos: $($item.ResourceGroupName)" -ForegroundColor Gray
         Write-Host "Ubicación: $($item.Location)" -ForegroundColor Gray
