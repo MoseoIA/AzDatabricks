@@ -159,7 +159,7 @@ function Show-Results {
         return
     }
 
-    Write-Host "`n⚠️ Found $($Results.Count) non-compliant $Type:" -ForegroundColor Yellow
+    Write-Host "`n⚠️ Found $($Results.Count) non-compliant ${Type}:" -ForegroundColor Yellow
     $Results | Format-Table -Property Name, ResourceType, ResourceGroupName, MissingTags, IncorrectValues -AutoSize
 }
 
@@ -178,10 +178,13 @@ Write-Host "Auditing for mandatory tags: $($mandatoryTagsHash.Keys -join ', ')" 
 if ($SubscriptionId) { Set-AzContext -SubscriptionId $SubscriptionId -ErrorAction SilentlyContinue }
 
 $currentContext = Get-AzContext
-$subscriptionName = $currentContext.Subscription.Name
-$subscriptionIdValue = $currentContext.Subscription.Id
 
-Write-Host "Auditing Subscription: '$subscriptionName' ($subscriptionIdValue)" -ForegroundColor Cyan
+# Format connection context messages safely
+$subscriptionMsg = "Auditing Subscription: '{0}' ({1})" -f $currentContext.Subscription.Name, $currentContext.Subscription.Id
+
+Write-Host $subscriptionMsg -ForegroundColor Cyan
+
+$subscriptionName = $currentContext.Subscription.Name
 
 $allResults = @()
 $commonParams = @{

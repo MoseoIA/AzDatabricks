@@ -156,7 +156,7 @@ function Show-Results {
         return
     }
     
-    Write-Host "`n⚠️ Found $($Results.Count) untagged $Type:" -ForegroundColor Yellow
+    Write-Host "`n⚠️ Found $($Results.Count) untagged ${Type}:" -ForegroundColor Yellow
     
     # Display results in a clean, formatted table.
     $Results | Format-Table -Property SubscriptionName, ResourceGroupName, Name, ResourceType, Location -AutoSize
@@ -178,13 +178,15 @@ if ($SubscriptionId) {
 }
 
 $currentContext = Get-AzContext
+
+# Format connection context messages safely
+$subscriptionMsg = "Auditing Subscription: '{0}' ({1})" -f $currentContext.Subscription.Name, $currentContext.Subscription.Id
+$userMsg = "User Account: {0}" -f $currentContext.Account.Id
+
+Write-Host $subscriptionMsg -ForegroundColor Cyan
+Write-Host $userMsg -ForegroundColor Cyan
+
 $subscriptionName = $currentContext.Subscription.Name
-$subscriptionIdValue = $currentContext.Subscription.Id
-$userAccountValue = $currentContext.Account.Id
-
-Write-Host "Auditing Subscription: '$subscriptionName' ($subscriptionIdValue)" -ForegroundColor Cyan
-Write-Host "User Account: $userAccountValue" -ForegroundColor Cyan
-
 $allResults = @()
 
 # Execute audit based on the specified type.
@@ -217,8 +219,9 @@ if ($ExportToCSV) {
 }
 
 # Final summary.
+$summaryColor = if ($allResults.Count -gt 0) { "Yellow" } else { "Green" }
 Write-Host "`n📊 Audit Summary:" -ForegroundColor Cyan
-Write-Host "Total untagged items found: $($allResults.Count)" -ForegroundColor $(if ($allResults.Count -gt 0) { "Yellow" } else { "Green" })
+Write-Host "Total untagged items found: $($allResults.Count)" -ForegroundColor $summaryColor
 
 if ($allResults.Count -gt 0) {
     Write-Host "`n💡 Recommended Next Steps:" -ForegroundColor Cyan
