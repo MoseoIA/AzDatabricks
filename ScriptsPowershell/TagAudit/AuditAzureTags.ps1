@@ -1,114 +1,104 @@
+# EXPERT MODE - Rewritten for clarity, robustness, and improved output.
 param(
-    [Parameter(Mandatory = $true)]
+    [Parameter(Mandatory = $true, HelpMessage = "Specify the type of audit: ResourceGroups, Resources, or Both.")]
     [ValidateSet("ResourceGroups", "Resources", "Both")]
     [string]$AuditType,
     
-    [Parameter(Mandatory = $false)]
-    [string]$SubscriptionId = $null,
+    [Parameter(Mandatory = $false, HelpMessage = "Optional: Specify a Subscription ID to audit. If not provided, the current context's subscription is used.")]
+    [string]$SubscriptionId,
     
-    [Parameter(Mandatory = $false)]
-    [string]$OutputPath = $null,
+    [Parameter(Mandatory = $false, HelpMessage = "Optional: Specify the full path for the CSV export file. If not provided, a default name will be generated.")]
+    [string]$OutputPath,
     
-    [Parameter(Mandatory = $false)]
+    [Parameter(Mandatory = $false, HelpMessage = "Switch to enable exporting the results to a CSV file.")]
     [switch]$ExportToCSV
 )
 
-# Función para verificar si está conectado a Azure
+#region Core Functions
+
+# Function to check for an active Azure session.
 function Test-AzureConnection {
     try {
         $context = Get-AzContext
         if ($null -eq $context) {
-            Write-Host "No hay una sesión activa de Azure. Por favor, ejecute Connect-AzAccount primero." -ForegroundColor Red
+            Write-Host "No active Azure session found. Please run Connect-AzAccount first." -ForegroundColor Red
             return $false
         }
         return $true
     }
     catch {
-        Write-Host "Error al verificar la conexión de Azure: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "Error checking Azure connection: $($_.Exception.Message)" -ForegroundColor Red
         return $false
     }
 }
 
-# Función para obtener grupos de recursos sin tags
-function Get-ResourceGroupsWithoutTags {
+# Function to get resource groups without tags.
+function Get-UntaggedResourceGroups {
     param(
-        [string]$SubscriptionId
+        [string]$SubscriptionName
     )
     
-    Write-Host "Obteniendo grupos de recursos sin tags..." -ForegroundColor Yellow
-    
+    Write-Host "Fetching resource groups without tags..." -ForegroundColor Yellow
     try {
-        if ($SubscriptionId) {
-            $resourceGroups = Get-AzResourceGroup -DefaultProfile (Get-AzContext) | Where-Object { $_.ResourceGroupName -and $_.SubscriptionId -eq $SubscriptionId }
-        } else {
-            $resourceGroups = Get-AzResourceGroup
-        }
+        $resourceGroups = Get-AzResourceGroup
         
-        $resourceGroupsWithoutTags = @()
-        
-        foreach ($rg in $resourceGroups) {
+        $untaggedGroups = foreach ($rg in $resourceGroups) {
             if ($null -eq $rg.Tags -or $rg.Tags.Count -eq 0) {
-                $resourceGroupsWithoutTags += [PSCustomObject]@{
-                    Name = $rg.ResourceGroupName
-                    ResourceType = "ResourceGroup"
+                # Output a unified object. For a Resource Group, its name is the resource itself.
+                [PSCustomObject]@{
+                    SubscriptionName  = $SubscriptionName
                     ResourceGroupName = $rg.ResourceGroupName
-                    Location = $rg.Location
-                    SubscriptionId = $rg.ResourceId.Split('/')[2]
-                    Tags = "No Tags"
-                    ResourceId = $rg.ResourceId
+                    Name              = $rg.ResourceGroupName # The RG is the resource
+                    ResourceType      = "Microsoft.Resources/subscriptions/resourceGroups"
+                    Location          = $rg.Location
+                    ResourceId        = $rg.ResourceId
                 }
             }
         }
-        
-        return $resourceGroupsWithoutTags
+        return $untaggedGroups
     }
     catch {
-        Write-Host "Error al obtener grupos de recursos: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "Error fetching resource groups: $($_.Exception.Message)" -ForegroundColor Red
         return @()
     }
 }
 
-# Función para obtener recursos sin tags
-function Get-ResourcesWithoutTags {
+# Function to get resources without tags.
+function Get-UntaggedResources {
     param(
-        [string]$SubscriptionId
+        [string]$SubscriptionName
     )
     
-    Write-Host "Obteniendo recursos sin tags..." -ForegroundColor Yellow
-    
+    Write-Host "Fetching resources without tags..." -ForegroundColor Yellow
     try {
-        if ($SubscriptionId) {
-            Set-AzContext -SubscriptionId $SubscriptionId
-            $resources = Get-AzResource
-        } else {
-            $resources = Get-AzResource
-        }
+        $resources = Get-AzResource
         
-        $resourcesWithoutTags = @()
-        
-        foreach ($resource in $resources) {
+        $untaggedResources = foreach ($resource in $resources) {
             if ($null -eq $resource.Tags -or $resource.Tags.Count -eq 0) {
-                $resourcesWithoutTags += [PSCustomObject]@{
-                    Name = $resource.Name
-                    ResourceType = $resource.ResourceType
+                # Output a unified object.
+                [PSCustomObject]@{
+                    SubscriptionName  = $SubscriptionName
                     ResourceGroupName = $resource.ResourceGroupName
-                    Location = $resource.Location
-                    SubscriptionId = $resource.ResourceId.Split('/')[2]
-                    Tags = "No Tags"
-                    ResourceId = $resource.ResourceId
+                    Name              = $resource.Name
+                    ResourceType      = $resource.ResourceType
+                    Location          = $resource.Location
+                    ResourceId        = $resource.ResourceId
                 }
             }
         }
-        
-        return $resourcesWithoutTags
+        return $untaggedResources
     }
     catch {
-        Write-Host "Error al obtener recursos: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "Error fetching resources: $($_.Exception.Message)" -ForegroundColor Red
         return @()
     }
 }
 
-# Función para exportar resultados a CSV - MEJORADA
+#endregion
+
+#region Output Functions
+
+# Function to export results to a CSV file.
 function Export-ResultsToCSV {
     param(
         [array]$Results,
@@ -116,136 +106,123 @@ function Export-ResultsToCSV {
         [string]$AuditType
     )
     
-    if ($null -eq $Results -or $Results.Count -eq 0) {
-        Write-Host "No hay resultados para exportar." -ForegroundColor Yellow
+    if (-not $Results) {
+        Write-Host "No results to export." -ForegroundColor Yellow
         return
     }
     
     $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
-    
     if ([string]::IsNullOrEmpty($OutputPath)) {
-        $OutputPath = ".\Azure_Tags_Audit_${AuditType}_${timestamp}.csv"
+        # Generate a default, descriptive filename.
+        $OutputPath = Join-Path -Path $PSScriptRoot -ChildPath "Azure_Tag_Audit_${AuditType}_${timestamp}.csv"
     }
     
-    # Verificar que el directorio de destino existe
+    # Ensure the destination directory exists.
     $directory = Split-Path -Path $OutputPath -Parent
-    if ($directory -and -not (Test-Path $directory)) {
+    if (-not (Test-Path $directory)) {
         try {
-            New-Item -ItemType Directory -Path $directory -Force | Out-Null
-            Write-Host "Directorio creado: $directory" -ForegroundColor Yellow
+            New-Item -ItemType Directory -Path $directory -Force -ErrorAction Stop | Out-Null
+            Write-Host "Created directory: $directory" -ForegroundColor Yellow
         }
         catch {
-            Write-Host "Error al crear directorio: $($_.Exception.Message)" -ForegroundColor Red
+            Write-Host "Error creating directory '$directory': $($_.Exception.Message)" -ForegroundColor Red
             return
         }
     }
     
     try {
-        Write-Host "Exportando $($Results.Count) resultados..." -ForegroundColor Yellow
-        $Results | Export-Csv -Path $OutputPath -NoTypeInformation -Encoding UTF8
-        Write-Host "✅ Resultados exportados exitosamente a: $OutputPath" -ForegroundColor Green
+        Write-Host "Exporting $($Results.Count) results to CSV..." -ForegroundColor Yellow
         
-        # Verificar que el archivo se creó correctamente
-        if (Test-Path $OutputPath) {
-            $fileInfo = Get-Item $OutputPath
-            Write-Host "Tamaño del archivo: $($fileInfo.Length) bytes" -ForegroundColor Cyan
-        } else {
-            Write-Host "⚠️  Advertencia: No se pudo verificar la creación del archivo" -ForegroundColor Yellow
-        }
+        # Define the exact columns and order for the CSV.
+        $Results | Select-Object SubscriptionName, ResourceGroupName, Name, ResourceType, Location, ResourceId |
+            Export-Csv -Path $OutputPath -NoTypeInformation -Encoding UTF8 -ErrorAction Stop
+            
+        Write-Host "✅ Results successfully exported to: $OutputPath" -ForegroundColor Green
     }
     catch {
-        Write-Host "❌ Error al exportar resultados: $($_.Exception.Message)" -ForegroundColor Red
-        Write-Host "Ruta intentada: $OutputPath" -ForegroundColor Gray
+        Write-Host "❌ Error exporting results: $($_.Exception.Message)" -ForegroundColor Red
     }
 }
 
-# Función para mostrar resultados en consola
+# Function to display results in the console as a table.
 function Show-Results {
     param(
         [array]$Results,
         [string]$Type
     )
     
-    if ($null -eq $Results -or $Results.Count -eq 0) {
-        Write-Host "✅ No se encontraron $Type sin tags." -ForegroundColor Green
+    if (-not $Results) {
+        Write-Host "✅ No untagged $Type found." -ForegroundColor Green
         return
     }
     
-    Write-Host "`n⚠️  Se encontraron $($Results.Count) $Type sin tags:" -ForegroundColor Yellow
-    Write-Host "=" * 80 -ForegroundColor Cyan
+    Write-Host "`n⚠️ Found $($Results.Count) untagged $Type:" -ForegroundColor Yellow
     
-    foreach ($item in $Results) {
-        Write-Host "Nombre: $($item.Name)" -ForegroundColor White
-        Write-Host "Tipo: $($item.ResourceType)" -ForegroundColor Gray
-        Write-Host "Grupo de Recursos: $($item.ResourceGroupName)" -ForegroundColor Gray
-        Write-Host "Ubicación: $($item.Location)" -ForegroundColor Gray
-        Write-Host "Suscripción: $($item.SubscriptionId)" -ForegroundColor Gray
-        Write-Host "Resource ID: $($item.ResourceId)" -ForegroundColor DarkGray
-        Write-Host "-" * 80 -ForegroundColor DarkGray
-    }
+    # Display results in a clean, formatted table.
+    $Results | Format-Table -Property SubscriptionName, ResourceGroupName, Name, ResourceType, Location -AutoSize
 }
 
-# Script principal
-Write-Host "🚀 Iniciando auditoría de tags en Azure..." -ForegroundColor Cyan
-Write-Host "Tipo de auditoría: $AuditType" -ForegroundColor Cyan
+#endregion
 
-# Verificar conexión a Azure
+# --- Main Script Execution ---
+Write-Host "🚀 Starting Azure Tag Audit..." -ForegroundColor Cyan
+Write-Host "Audit Type: $AuditType" -ForegroundColor Cyan
+
 if (-not (Test-AzureConnection)) {
     exit 1
 }
 
-# Mostrar contexto actual
+# Set subscription context if specified.
+if ($SubscriptionId) {
+    Set-AzContext -SubscriptionId $SubscriptionId -ErrorAction SilentlyContinue
+}
+
 $currentContext = Get-AzContext
-Write-Host "Contexto actual:" -ForegroundColor Cyan
-Write-Host "  Suscripción: $($currentContext.Subscription.Name) ($($currentContext.Subscription.Id))" -ForegroundColor White
-Write-Host "  Cuenta: $($currentContext.Account.Id)" -ForegroundColor White
+$subscriptionName = $currentContext.Subscription.Name
+
+Write-Host "Auditing Subscription: '$($subscriptionName)' ($($currentContext.Subscription.Id))" -ForegroundColor Cyan
+Write-Host "User Account: $($currentContext.Account.Id)" -ForegroundColor Cyan
 
 $allResults = @()
 
-# Ejecutar auditoría según el tipo especificado
+# Execute audit based on the specified type.
 switch ($AuditType) {
     "ResourceGroups" {
-        $results = Get-ResourceGroupsWithoutTags -SubscriptionId $SubscriptionId
-        Show-Results -Results $results -Type "grupos de recursos"
+        $results = Get-UntaggedResourceGroups -SubscriptionName $subscriptionName
+        Show-Results -Results $results -Type "Resource Groups"
         $allResults += $results
     }
-    
     "Resources" {
-        $results = Get-ResourcesWithoutTags -SubscriptionId $SubscriptionId
-        Show-Results -Results $results -Type "recursos"
+        $results = Get-UntaggedResources -SubscriptionName $subscriptionName
+        Show-Results -Results $results -Type "Resources"
         $allResults += $results
     }
-    
     "Both" {
-        Write-Host "`n📋 Auditando grupos de recursos..." -ForegroundColor Cyan
-        $rgResults = Get-ResourceGroupsWithoutTags -SubscriptionId $SubscriptionId
-        Show-Results -Results $rgResults -Type "grupos de recursos"
+        $rgResults = Get-UntaggedResourceGroups -SubscriptionName $subscriptionName
+        Show-Results -Results $rgResults -Type "Resource Groups"
         
-        Write-Host "`n📋 Auditando recursos..." -ForegroundColor Cyan
-        $resourceResults = Get-ResourcesWithoutTags -SubscriptionId $SubscriptionId
-        Show-Results -Results $resourceResults -Type "recursos"
+        $resourceResults = Get-UntaggedResources -SubscriptionName $subscriptionName
+        Show-Results -Results $resourceResults -Type "Resources"
         
         if ($rgResults) { $allResults += $rgResults }
         if ($resourceResults) { $allResults += $resourceResults }
     }
 }
 
-# Exportar resultados si se solicita
+# Export results if the switch is used.
 if ($ExportToCSV) {
-    Write-Host "`n📤 Iniciando exportación a CSV..." -ForegroundColor Cyan
     Export-ResultsToCSV -Results $allResults -OutputPath $OutputPath -AuditType $AuditType
 }
 
-# Resumen final
-Write-Host "`n📊 Resumen de auditoría:" -ForegroundColor Cyan
-Write-Host "Total de elementos sin tags encontrados: $($allResults.Count)" -ForegroundColor $(if ($allResults.Count -gt 0) { "Yellow" } else { "Green" })
+# Final summary.
+Write-Host "`n📊 Audit Summary:" -ForegroundColor Cyan
+Write-Host "Total untagged items found: $($allResults.Count)" -ForegroundColor $(if ($allResults.Count -gt 0) { "Yellow" } else { "Green" })
 
 if ($allResults.Count -gt 0) {
-    Write-Host "`n💡 Próximos pasos recomendados:" -ForegroundColor Cyan
-    Write-Host "1. Revisar los elementos listados arriba" -ForegroundColor White
-    Write-Host "2. Definir tags obligatorios para tu organización" -ForegroundColor White
-    Write-Host "3. Implementar políticas de Azure Policy para tags obligatorios" -ForegroundColor White
-    Write-Host "4. Usar scripts de remediación para aplicar tags masivamente" -ForegroundColor White
+    Write-Host "`n💡 Recommended Next Steps:" -ForegroundColor Cyan
+    Write-Host "1. Review the items listed in the table or CSV export."
+    Write-Host "2. Use the 'ApplyAzureTags.ps1' script to remediate missing tags."
+    Write-Host "3. Implement Azure Policy to enforce mandatory tagging for new resources."
 }
 
-Write-Host "`n✅ Auditoría completada." -ForegroundColor Green
+Write-Host "`n✅ Audit complete." -ForegroundColor Green

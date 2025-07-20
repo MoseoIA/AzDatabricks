@@ -1,41 +1,70 @@
-Características principales:
-Parámetros del script:
+--- ValidateMandatoryTags.ps1 ---
 
-MandatoryTags: String con los tags obligatorios (formato: "tag1=value1,tag2=value2")
-AuditType: ResourceGroups, Resources, o Both
-ValidateValues: Switch para validar no solo presencia sino también valores exactos
-OnlyMissingTags: Switch para mostrar solo recursos con tags faltantes (ignorar valores incorrectos)
-ExportToCSV: Switch para exportar resultados
-OutputPath: Ruta personalizada para el archivo CSV
+## Description
+This script validates Azure resources and resource groups against a defined set of mandatory tags. It can check for the presence of tags, validate their values, and report on non-compliant resources.
 
-Funcionalidades avanzadas:
+The output is displayed in a clean table format in the console and can be exported to a CSV file for further analysis or remediation.
 
-Validación flexible: Puede verificar solo presencia de tags o también valores exactos
-Parser inteligente: Parsea correctamente la cadena de tags mandatorios
-Progreso visual: Muestra progreso al procesar muchos recursos
-Estadísticas detalladas: Diferencia entre tags faltantes y valores incorrectos
-Reportes completos: Muestra tags actuales vs. requeridos
+## Parameters
 
-Ejemplos de uso:
-powershell# Validar solo presencia de tags (no valores)
-.\ValidateMandatoryTags.ps1 -MandatoryTags "Environment=Production,Owner=IT,CostCenter=12345" -AuditType Both
+- `-MandatoryTags` (Required): A comma-separated string of tags to validate. 
+  - Format: `"tagKey1=tagValue1,tagKey2=tagValue2"`
 
-# Validar presencia Y valores exactos
-.\ValidateMandatoryTags.ps1 -MandatoryTags "Environment=Production,Owner=IT,CostCenter=12345" -AuditType Both -ValidateValues
+- `-AuditType` (Required): Specifies the scope of the audit.
+  - `ResourceGroups`: Audits only resource groups.
+  - `Resources`: Audits only resources.
+  - `Both`: Audits both resource groups and resources.
 
-# Solo mostrar recursos con tags completamente faltantes
-.\ValidateMandatoryTags.ps1 -MandatoryTags "Environment=Production,Owner=IT" -AuditType Resources -OnlyMissingTags
+- `-SubscriptionId` (Optional): The ID of the subscription to audit. If not provided, the script uses the current active Azure context.
 
-# Exportar resultados a CSV
-.\ValidateMandatoryTags.ps1 -MandatoryTags "tag1=tg1,tag2=tg2,tag3=tg3" -AuditType Both -ExportToCSV
+- `-ExportToCSV` (Optional Switch): If present, exports the non-compliant results to a CSV file in the script's directory.
 
-# Validar suscripción específica
-.\ValidateMandatoryTags.ps1 -MandatoryTags "Environment=Prod,Team=DevOps" -AuditType Both -SubscriptionId "12345678-1234-1234-1234-123456789012"
-Formato de salida:
-El script proporciona información detallada sobre cada recurso no conforme:
+- `-OutputPath` (Optional): Specify a custom full path for the CSV export file. Ignored if `-ExportToCSV` is not used.
 
-Nombre y tipo de recurso
-Tags actuales (todos los tags existentes)
-Tags faltantes (cuáles tags mandatorios no están presentes)
-Valores incorrectos (cuáles tags tienen valores diferentes a los esperados)
-Estadísticas de cumplimiento
+- `-ValidateValues` (Optional Switch): If present, the script validates that the tag values match those specified in `-MandatoryTags`. If omitted, it only checks for the presence of the tag key.
+
+- `-OnlyMissingTags` (Optional Switch): If present, the report will only include items that are completely missing one or more mandatory tags. It will ignore items that have all tags but with incorrect values.
+
+## How to Use
+
+### Example 1: Basic check for tag presence on all resources
+Checks if `Environment` and `Owner` tags exist, regardless of their value.
+
+```powershell
+.\ValidateMandatoryTags.ps1 -MandatoryTags "Environment=any,Owner=any" -AuditType Both
+```
+
+### Example 2: Validate exact tag values and export to CSV
+Checks for `Environment=Production` and `CostCenter=12345` and exports the list of non-compliant resources to a CSV file.
+
+```powershell
+.\ValidateMandatoryTags.ps1 -MandatoryTags "Environment=Production,CostCenter=12345" -AuditType Both -ValidateValues -ExportToCSV
+```
+
+### Example 3: Find only resources with completely missing tags in a specific subscription
+Audits only resources (not RGs) in a specific subscription, looking only for items that are missing the `Application` tag.
+
+```powershell
+.\ValidateMandatoryTags.ps1 -MandatoryTags "Application=any" -AuditType Resources -OnlyMissingTags -SubscriptionId "your-subscription-id"
+```
+
+### Example 4: Export results to a custom path
+Validates tags and saves the report to a specific network share or directory.
+
+```powershell
+.\ValidateMandatoryTags.ps1 -MandatoryTags "Project=Phoenix" -AuditType Both -ExportToCSV -OutputPath "C:\AzureReports\TagValidation_Phoenix.csv"
+```
+
+## Output Format
+
+- **Console:** A formatted table showing non-compliant items, including `Name`, `ResourceType`, `ResourceGroupName`, `MissingTags`, and `IncorrectValues`.
+- **CSV File:** A detailed report with the following columns:
+  - `SubscriptionName`
+  - `ResourceGroupName`
+  - `Name`
+  - `ResourceType`
+  - `Location`
+  - `MissingTags`
+  - `IncorrectValues`
+  - `CurrentTags`
+  - `ResourceId`

@@ -1,42 +1,62 @@
-PowerShell para auditar recursos sin tags en Azure. El script incluye las siguientes características:
-Características principales:
+--- AuditAzureTags.ps1 ---
 
-Parámetros flexibles:
+## Description
+This script audits an Azure subscription to find resources and resource groups that have no tags assigned to them. 
 
-AuditType: Permite elegir entre "ResourceGroups", "Resources" o "Both"
-SubscriptionId: Opcional, para auditar una suscripción específica
-OutputPath: Ruta personalizada para exportar resultados
-ExportToCSV: Switch para exportar a CSV
+It's a straightforward way to identify items that are missing basic governance tagging. The results are displayed in a clean table in the console and can be exported to a CSV file for reporting or remediation.
 
+## Parameters
 
-Funcionalidades:
+- `-AuditType` (Required): Specifies the scope of the audit.
+  - `ResourceGroups`: Audits only resource groups.
+  - `Resources`: Audits only resources.
+  - `Both`: Audits both resource groups and resources.
 
-Verifica la conexión a Azure automáticamente
-Obtiene grupos de recursos sin tags
-Obtiene recursos individuales sin tags
-Muestra resultados formatados en consola
-Exporta resultados a CSV
-Proporciona resumen y recomendaciones
+- `-SubscriptionId` (Optional): The ID of the subscription to audit. If not provided, the script uses the current active Azure context.
 
+- `-ExportToCSV` (Optional Switch): If present, exports the results to a CSV file in the script's directory.
 
+- `-OutputPath` (Optional): Specify a custom full path for the CSV export file. This is ignored if `-ExportToCSV` is not used.
 
-Ejemplos de uso:
-powershell# Auditar solo grupos de recursos
-.\AuditAzureTags.ps1 -AuditType ResourceGroups
+## How to Use
 
-# Auditar solo recursos individuales
-.\AuditAzureTags.ps1 -AuditType Resources
+### Example 1: Audit all untagged items in the current subscription
 
-# Auditar ambos y exportar a CSV
-.\AuditAzureTags.ps1 -AuditType Both -ExportToCSV
+```powershell
+.\AuditAzureTags.ps1 -AuditType Both
+```
 
-# Auditar suscripción específica
-.\AuditAzureTags.ps1 -AuditType Both -SubscriptionId "12345678-1234-1234-1234-123456789012"
+### Example 2: Audit only untagged resource groups and export to CSV
 
-# Auditar con ruta de salida personalizada
-.\AuditAzureTags.ps1 -AuditType Both -ExportToCSV -OutputPath "C:\Reports\TagsAudit.csv"
-Prerrequisitos:
+```powershell
+.\AuditAzureTags.ps1 -AuditType ResourceGroups -ExportToCSV
+```
 
-Módulo Az de PowerShell instalado
-Conexión a Azure (Connect-AzAccount)
-Permisos de lectura en las suscripciones
+### Example 3: Audit untagged resources in a specific subscription
+
+```powershell
+.\AuditAzureTags.ps1 -AuditType Resources -SubscriptionId "your-subscription-id"
+```
+
+### Example 4: Audit everything and save the report to a custom path
+
+```powershell
+.\AuditAzureTags.ps1 -AuditType Both -ExportToCSV -OutputPath "C:\AzureReports\UntaggedResources.csv"
+```
+
+## Output Format
+
+- **Console:** A formatted table showing untagged items with the following columns:
+  - `SubscriptionName`
+  - `ResourceGroupName`
+  - `Name` (Name of the resource or resource group)
+  - `ResourceType`
+  - `Location`
+
+- **CSV File:** A detailed report with the following columns:
+  - `SubscriptionName`
+  - `ResourceGroupName`
+  - `Name`
+  - `ResourceType`
+  - `Location`
+  - `ResourceId`
