@@ -179,8 +179,9 @@ if ($SubscriptionId) { Set-AzContext -SubscriptionId $SubscriptionId -ErrorActio
 
 $currentContext = Get-AzContext
 $subscriptionName = $currentContext.Subscription.Name
+$subscriptionIdValue = $currentContext.Subscription.Id
 
-Write-Host "Auditing Subscription: '$($subscriptionName)' ($($currentContext.Subscription.Id))" -ForegroundColor Cyan
+Write-Host "Auditing Subscription: '$subscriptionName' ($subscriptionIdValue)" -ForegroundColor Cyan
 
 $allResults = @()
 $commonParams = @{

@@ -179,9 +179,11 @@ if ($SubscriptionId) {
 
 $currentContext = Get-AzContext
 $subscriptionName = $currentContext.Subscription.Name
+$subscriptionIdValue = $currentContext.Subscription.Id
+$userAccountValue = $currentContext.Account.Id
 
-Write-Host "Auditing Subscription: '$($subscriptionName)' ($($currentContext.Subscription.Id))" -ForegroundColor Cyan
-Write-Host "User Account: $($currentContext.Account.Id)" -ForegroundColor Cyan
+Write-Host "Auditing Subscription: '$subscriptionName' ($subscriptionIdValue)" -ForegroundColor Cyan
+Write-Host "User Account: $userAccountValue" -ForegroundColor Cyan
 
 $allResults = @()
 
