@@ -76,5 +76,14 @@ resource "azurerm_private_endpoint" "adf_pe" {
     }
   }
 
+  dynamic "ip_configuration" {
+    for_each = var.private_endpoint_ip_address != null ? [1] : []
+    content {
+      name                 = "default-ip-configuration"
+      private_ip_address   = var.private_endpoint_ip_address
+      subresource_name     = "dataFactory"
+    }
+  }
+
   tags = var.tags
 }

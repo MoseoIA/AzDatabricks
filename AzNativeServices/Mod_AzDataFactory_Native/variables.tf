@@ -63,3 +63,11 @@ variable "tags" {
   description = "Un mapa de etiquetas para aplicar a todos los recursos creados."
   default     = {}
 }
+
+# --- Variable para la IP del Private Endpoint ---
+
+variable "private_endpoint_ip_address" {
+  type        = string
+  description = "Dirección IP privada para el Private Endpoint. Si se deja en null, se asignará una dinámicamente."
+  default     = null
+}

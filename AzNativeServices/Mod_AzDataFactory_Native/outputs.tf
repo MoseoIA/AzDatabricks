@@ -15,3 +15,8 @@ output "private_dns_zone_id" {
   value       = var.enable_private_dns_integration && var.create_private_dns_zone ? azurerm_private_dns_zone.adf_pvdns[0].id : null
   description = "El ID de la Zona DNS Privada creada por el módulo. Será nulo si no se creó."
 }
+
+output "private_endpoint_ip_address" {
+  value       = azurerm_private_endpoint.adf_pe.private_service_connection[0].private_ip_address
+  description = "La dirección IP privada del Private Endpoint."
+}
