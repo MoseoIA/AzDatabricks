@@ -90,6 +90,7 @@ module "data_factory_contact_center" {
   private_endpoint_vnet_name    = "znsmccintpp01ue2net01"
   private_endpoint_vnet_rg_name = "z-nsm-ccint-pp01-ue2-01"
   private_endpoint_subnet_name  = "main-pic-rt"
+  private_endpoint_ip_address   = "10.0.1.10" # <-- AÑADIDO
 
   # --- CONFIGURACIÓN DE DNS ---
   # Escenario 1: CREAR una nueva Zona DNS.
