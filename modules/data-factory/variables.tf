@@ -35,7 +35,7 @@ variable "private_endpoint_subnet_name" {
 variable "enable_private_dns_integration" {
   type        = bool
   description = "Interruptor principal. Si es true, se habilita la integración con Zonas DNS Privadas."
-  default     = true
+  default     = false
 }
 
 variable "create_private_dns_zone" {
