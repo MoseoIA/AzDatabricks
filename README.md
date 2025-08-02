@@ -19,24 +19,23 @@ El repositorio está organizado de la siguiente manera:
 .
 ├── modules/
 │   ├── data-factory/
-│   │   ├── main.tf
-│   │   ├── variables.tf
-│   │   └── outputs.tf
-│   └── databricks-workspace/
-│       ├── main.tf
-│       ├── variables.tf
-│       └── outputs.tf
+│   ├── databricks-workspace/
+│   ├── key-vault/
+│   └── storage-account/
 │
 └── stacks/
-    └── (ejemplos: tenant-produccion, proyecto-cliente-x, etc.)
+    └── example-deployment/
+        └── main.tf
 ```
 
-- **`/modules`**: Este directorio contiene todos los módulos de Terraform reutilizables. Cada subdirectorio corresponde a un módulo específico.
-  - `main.tf`: Contiene la lógica principal y la definición de recursos del módulo.
-  - `variables.tf`: Define las variables de entrada que el módulo acepta.
-  - `outputs.tf`: Define los valores de salida que el módulo expone.
+- **`/modules`**: Este directorio contiene todos los módulos de Terraform reutilizables. Cada subdirectorio corresponde a un módulo específico. Los módulos actualmente disponibles son:
+    - `data-factory`: Para desplegar Azure Data Factory con soporte para Private Endpoints.
+    - `databricks-workspace`: Para desplegar un workspace de Azure Databricks con VNet Injection y Private Link.
+    - `key-vault`: Para desplegar Azure Key Vault con gestión de políticas de acceso y Private Endpoint.
+    - `storage-account`: Para desplegar Azure Storage Accounts, con soporte para Data Lake Gen2 y Private Endpoints para `blob`, `file`, `queue` y `dfs`.
 
-- **`/stacks`**: Este directorio contiene las configuraciones de nivel superior o "stacks". Cada subdirectorio representa un despliegue de infraestructura completo y coherente (por ejemplo, un entorno, un proyecto). Los archivos `main.tf` dentro de un stack hacen referencia a los módulos en el directorio `/modules` para aprovisionar los recursos.
+- **`/stacks`**: Este directorio contiene las configuraciones de nivel superior o "stacks". Cada subdirectorio representa un despliegue de infraestructura completo y coherente.
+    - `example-deployment`: Un stack de ejemplo que muestra cómo consumir los módulos `storage-account` y `key-vault`.
 
 ## Flujo de Trabajo (Workflow)
 
