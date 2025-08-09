@@ -1,0 +1,64 @@
+# Backend: configurar en providers.tf el backend de azurerm
+
+# Comunes
+resource_group_name = "rg-iac-ejemplo"
+tags = {
+  environment = "dev"
+  owner       = "equipo-datos"
+}
+
+# Data Factory
+data_factory_name                   = "adf-ejemplo-dev"
+adf_private_endpoint_vnet_name      = "vnet-hub"
+adf_private_endpoint_vnet_rg_name   = "rg-redes"
+adf_private_endpoint_subnet_name    = "snet-privatelink"
+adf_enable_private_dns_integration  = true
+adf_create_private_dns_zone         = false
+adf_private_dns_zone_name           = "privatelink.datafactory.azure.net"
+adf_private_dns_zone_id             = "/subscriptions/<subId>/resourceGroups/<rg>/providers/Microsoft.Network/privateDnsZones/privatelink.datafactory.azure.net"
+adf_private_endpoint_ip_address     = null
+adf_private_endpoint_ip_offset      = 10
+
+# Databricks
+databricks_workspace_name              = "dbw-ejemplo-dev"
+databricks_managed_resource_group_name = "rg-managed-dbw-ejemplo-dev"
+databricks_sku                         = "premium"
+
+databricks_vnet_name           = "vnet-databricks"
+databricks_vnet_rg_name        = "rg-redes"
+databricks_public_subnet_name  = "snet-dbw-public"
+databricks_private_subnet_name = "snet-dbw-private"
+public_subnet_nsg_id           = "/subscriptions/<subId>/resourceGroups/<rg>/providers/Microsoft.Network/networkSecurityGroups/nsg-dbw-public"
+private_subnet_nsg_id          = "/subscriptions/<subId>/resourceGroups/<rg>/providers/Microsoft.Network/networkSecurityGroups/nsg-dbw-private"
+
+db_private_endpoint_vnet_name     = "vnet-hub"
+db_private_endpoint_vnet_rg_name  = "rg-redes"
+db_private_endpoint_subnet_name   = "snet-privatelink"
+db_private_endpoint_ip_address    = null
+db_private_endpoint_ip_offset     = 11
+
+# SQL Database
+enable_sql_database                 = false
+sql_server_name                     = "sql-ejemplo-dev"
+sql_database_name                   = "db-ejemplo"
+sql_sku_name                        = "GP_S_Gen5_2"
+sql_administrator_login             = "sqladminuser"
+sql_administrator_login_password    = "<sensible>"
+sql_admin_group_object_id           = "00000000-0000-0000-0000-000000000000"
+sql_admin_group_name                = "aad-sql-admins"
+sql_azuread_authentication_only     = true
+sql_private_endpoint_vnet_name      = "vnet-hub"
+sql_private_endpoint_vnet_rg_name   = "rg-redes"
+sql_private_endpoint_subnet_name    = "snet-privatelink"
+sql_private_endpoint_ip_offset      = 14
+sql_allowed_public_ips              = ["203.0.113.10/32", "198.51.100.20/32"]
+
+db_enable_private_dns_integration = true
+db_create_private_dns_zone        = false
+db_private_dns_zone_name          = "privatelink.azuredatabricks.net"
+db_private_dns_zone_id            = "/subscriptions/<subId>/resourceGroups/<rg>/providers/Microsoft.Network/privateDnsZones/privatelink.azuredatabricks.net"
+
+db_create_storage_account = false
+db_storage_account_name   = null
+
+

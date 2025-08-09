@@ -8,6 +8,9 @@ locals {
   dns_zone_id = var.enable_private_dns_integration ? (
     var.create_private_dns_zone ? azurerm_private_dns_zone.databricks_pvdns[0].id : var.private_dns_zone_id_databricks
   ) : null
+  computed_private_ip = var.private_endpoint_ip_address != null ? var.private_endpoint_ip_address : (
+    var.private_endpoint_ip_offset != null ? cidrhost(data.azurerm_subnet.private_endpoint_subnet.address_prefixes[0], var.private_endpoint_ip_offset) : null
+  )
 }
 
 # --- DATA SOURCES ---
@@ -117,7 +120,23 @@ resource "azurerm_private_endpoint" "databricks_pe" {
     }
   }
 
+  dynamic "ip_configuration" {
+    for_each = local.computed_private_ip != null ? [1] : []
+    content {
+      name               = "default-ip-configuration"
+      private_ip_address = local.computed_private_ip
+      subresource_name   = "databricks_ui_api"
+    }
+  }
+
   tags = var.tags
+
+  lifecycle {
+    precondition {
+      condition     = !(var.require_static_private_endpoint_ip) || (local.computed_private_ip != null)
+      error_message = "Se requiere IP estática para el Private Endpoint de Databricks (defina private_endpoint_ip_address o private_endpoint_ip_offset)."
+    }
+  }
 }
 
 # --- Creación Opcional de la Cuenta de Almacenamiento ---

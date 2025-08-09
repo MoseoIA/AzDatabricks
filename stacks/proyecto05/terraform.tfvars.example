@@ -1,0 +1,52 @@
+project_name        = "proyecto05"
+resource_group_name = "rg-proyecto05"
+tags = { environment = "prod", owner = "equipo-datos" }
+
+enable_data_factory = false
+enable_databricks   = false
+enable_storage      = true
+enable_key_vault    = true
+
+# Storage Account
+storage_account_name             = "saproyecto05prod001"
+storage_account_tier             = "Standard"
+storage_replication_type         = "GRS"
+storage_is_hns_enabled           = true
+storage_enable_private_endpoint  = true
+storage_private_endpoint_vnet_name    = "vnet-hub"
+storage_private_endpoint_vnet_rg_name = "rg-redes"
+storage_private_endpoint_subnet_name  = "snet-privatelink"
+storage_private_endpoint_ip_offset    = 12
+storage_allowed_public_ips           = ["203.0.113.10/32", "198.51.100.20/32"]
+
+# Key Vault
+key_vault_name                    = "kv-proyecto05-prod"
+key_vault_sku                     = "premium"
+key_vault_enable_rbac             = true
+key_vault_soft_delete_retention_days = 90
+key_vault_purge_protection        = true
+key_vault_public_network_access   = false
+key_vault_enable_private_endpoint = true
+kv_private_endpoint_vnet_name    = "vnet-hub"
+kv_private_endpoint_vnet_rg_name = "rg-redes"
+kv_private_endpoint_subnet_name  = "snet-privatelink"
+kv_private_endpoint_ip_offset    = 13
+key_vault_allowed_public_ips     = ["203.0.113.10/32", "198.51.100.20/32"]
+
+# SQL Database
+enable_sql_database                 = false
+sql_server_name                     = "sql-proyecto05-prod"
+sql_database_name                   = "db-proyecto05"
+sql_sku_name                        = "GP_S_Gen5_2"
+sql_administrator_login             = "sqladminuser"
+sql_administrator_login_password    = "<sensible>"
+sql_admin_group_object_id           = "00000000-0000-0000-0000-000000000000"
+sql_admin_group_name                = "aad-sql-admins"
+sql_azuread_authentication_only     = true
+sql_private_endpoint_vnet_name      = "vnet-hub"
+sql_private_endpoint_vnet_rg_name   = "rg-redes"
+sql_private_endpoint_subnet_name    = "snet-privatelink"
+sql_private_endpoint_ip_offset      = 14
+sql_allowed_public_ips              = ["203.0.113.10/32", "198.51.100.20/32"]
+
+

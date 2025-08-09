@@ -71,3 +71,15 @@ variable "private_endpoint_ip_address" {
   description = "Dirección IP privada para el Private Endpoint. Si se deja en null, se asignará una dinámicamente."
   default     = null
 }
+
+variable "private_endpoint_ip_offset" {
+  type        = number
+  description = "Offset para calcular la IP del Private Endpoint usando cidrhost(base_subnet_cidr, offset). Alternativa a especificar la IP literal."
+  default     = null
+}
+
+variable "require_static_private_endpoint_ip" {
+  type        = bool
+  description = "Si true, el módulo exigirá que se provea una IP estática vía address u offset para el Private Endpoint."
+  default     = true
+}
